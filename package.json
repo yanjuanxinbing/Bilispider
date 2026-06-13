@@ -1,0 +1,16 @@
+{
+  "name": "bi",
+  "version": "1.0.0",
+  "description": "bi",
+  "main": "app.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "aq",
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^42.4.0",
+    "node-fetch": "2.6.7",
+    "socket.io-client": "^4.8.1"
+  }
+}
