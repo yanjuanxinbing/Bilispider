@@ -3,10 +3,10 @@ const io = require('socket.io-client')
 
 // WebSocket 配置
 const WS_CONFIG = {
-    url: 'http://localhost:5001',
-    reconnectDelay: 1000,
-    maxRetries: 3,
-    timeout: 60000
+  url: 'http://localhost:5001',
+  reconnectDelay: 1000,
+  maxRetries: 3,
+  timeout: 60000
 }
 
 let socket = null
@@ -24,90 +24,90 @@ const BACKEND_URL = 'http://localhost:5001'
 
 // 改进预加载函数
 async function preloadQualities() {
-    // 如果已经在加载中，返回现有的 Promise
-    if (isQualityLoading && qualityLoadPromise) {
-        return qualityLoadPromise
-    }
-
-    isQualityLoading = true
-    qualityLoadPromise = (async () => {
-        try {
-            const url = window.location.href
-            const ua = window.navigator.userAgent
-            const cookie = await getCookies()
-            
-            const response = await fetch(`${BACKEND_URL}/backend/get-video-qualities`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ url, ua, cookie })
-            })
-            
-            if (!response.ok) {
-                throw new Error('预加载清晰度失败')
-            }
-            
-            const result = await response.json()
-            cachedQualities = result.qualities
-            console.log('清晰度列表预加载成功')
-            return result.qualities
-        } catch (error) {
-            console.error('预加载清晰度失败:', error)
-            cachedQualities = null
-            throw error
-        } finally {
-            isQualityLoading = false
-            qualityLoadPromise = null
-        }
-    })()
-
+  // 如果已经在加载中，返回现有的 Promise
+  if (isQualityLoading && qualityLoadPromise) {
     return qualityLoadPromise
+  }
+
+  isQualityLoading = true
+  qualityLoadPromise = (async () => {
+    try {
+      const url = window.location.href
+      const ua = window.navigator.userAgent
+      const cookie = await getCookies()
+
+      const response = await fetch(`${BACKEND_URL}/backend/get-video-qualities`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url, ua, cookie })
+      })
+
+      if (!response.ok) {
+        throw new Error('预加载清晰度失败')
+      }
+
+      const result = await response.json()
+      cachedQualities = result.qualities
+      console.log('清晰度列表预加载成功')
+      return result.qualities
+    } catch (error) {
+      console.error('预加载清晰度失败:', error)
+      cachedQualities = null
+      throw error
+    } finally {
+      isQualityLoading = false
+      qualityLoadPromise = null
+    }
+  })()
+
+  return qualityLoadPromise
 }
 
 // 改进的 WebSocket 连接管理
 async function connectWebSocket() {
-    if (socket?.connected) {
-        console.log('WebSocket已连接，无需重新连接')
-        return socket
-    }
+  if (socket?.connected) {
+    console.log('WebSocket已连接，无需重新连接')
+    return socket
+  }
 
-    if (isServerStarting) {
-        console.log('服务正在启动中，请稍候...')
-        return null
-    }
+  if (isServerStarting) {
+    console.log('服务正在启动中，请稍候...')
+    return null
+  }
 
-    try {
-        isServerStarting = true
-        clearTimeout(connectTimeout)
-        
-        // 设置连接超时
-        connectTimeout = setTimeout(() => {
-            if (!socket?.connected) {
-                console.log('WebSocket连接超时')
-                throw new Error('连接超时')
-            }
-        }, WS_CONFIG.timeout)
-        
-        socket = io(WS_CONFIG.url)
+  try {
+    isServerStarting = true
+    clearTimeout(connectTimeout)
 
-        socket.on('download_progress', (data) => {
-            console.log('收到下载进度:', data)
-            window.dispatchEvent(new CustomEvent('download_progress', { detail: data }))
-        })
+    // 设置连接超时
+    connectTimeout = setTimeout(() => {
+      if (!socket?.connected) {
+        console.log('WebSocket连接超时')
+        throw new Error('连接超时')
+      }
+    }, WS_CONFIG.timeout)
 
-        return socket
+    socket = io(WS_CONFIG.url)
 
-    } catch (error) {
-        console.error('服务启动失败:', error)
-        throw error
-    }
+    socket.on('download_progress', (data) => {
+      console.log('收到下载进度:', data)
+      window.dispatchEvent(new CustomEvent('download_progress', { detail: data }))
+    })
+
+    return socket
+
+  } catch (error) {
+    console.error('服务启动失败:', error)
+    throw error
+  }
 }
 
 // 定义要暴露的API
 const electronAPI = {
-    selectDirectory: () => ipcRenderer.invoke('select-directory'),
-    getCurrentDirectory: () => ipcRenderer.invoke('get-current-directory'),
+  selectDirectory: () => ipcRenderer.invoke('select-directory'),
+  getCurrentDirectory: () => ipcRenderer.invoke('get-current-directory'),
 }
 
 // 暴露API到渲染进程
@@ -141,7 +141,7 @@ function createSettingsPanel() {
     z-index: 1000;
     min-width: 280px;
   `
-  
+
   // 添加标题
   const title = document.createElement('div')
   title.style.cssText = `
@@ -152,13 +152,13 @@ function createSettingsPanel() {
   `
   title.textContent = '下载设置'
   panel.appendChild(title)
-  
+
   // 添加目录选择区域
   const dirSection = document.createElement('div')
   dirSection.style.cssText = `
     margin-bottom: 16px;
   `
-  
+
   const dirLabel = document.createElement('div')
   dirLabel.style.cssText = `
     font-size: 13px;
@@ -167,7 +167,7 @@ function createSettingsPanel() {
   `
   dirLabel.textContent = '下载目录'
   dirSection.appendChild(dirLabel)
-  
+
   const dirDisplay = document.createElement('div')
   dirDisplay.style.cssText = `
     font-size: 12px;
@@ -180,7 +180,7 @@ function createSettingsPanel() {
     max-width: 100%;
   `
   dirSection.appendChild(dirDisplay)
-  
+
   const dirButton = document.createElement('button')
   dirButton.style.cssText = `
     font-size: 12px;
@@ -196,7 +196,7 @@ function createSettingsPanel() {
   dirButton.onmouseover = () => dirButton.style.background = '#33c2ff'
   dirButton.onmouseout = () => dirButton.style.background = '#00aeec'
   dirSection.appendChild(dirButton)
-  
+
   // 更新当前目录显示
   async function updateCurrentDir() {
     try {
@@ -208,15 +208,15 @@ function createSettingsPanel() {
       dirDisplay.textContent = '获取目录失败'
     }
   }
-  
+
   // 初始化显示当前目录
   updateCurrentDir()
-  
+
   // 添加目录选择事件
   dirButton.onclick = async () => {
     try {
       const result = await electronAPI.selectDirectory()
-      
+
       if (result.success) {
         dirDisplay.textContent = result.path
         // 立即更新显示
@@ -224,7 +224,7 @@ function createSettingsPanel() {
       } else if (!result.canceled) {  // 只在非取消情况下显示错误
         console.error('选择目录失败:', result.error, result.details)
         dirDisplay.textContent = result.error || '目录设置失败'
-        
+
         // 显示错误提示
         statusText.style.display = 'block'
         statusText.textContent = '设置下载目录失败，请重试'
@@ -238,7 +238,7 @@ function createSettingsPanel() {
       dirDisplay.textContent = '操作失败'
     }
   }
-  
+
   panel.appendChild(dirSection)
   return panel
 }
@@ -386,38 +386,38 @@ function createDownloadButtons() {
 
 // 修改页面加载事件监听
 window.addEventListener('load', async () => {
-    console.log('当前页面URL:', window.location.href);
-    
-    // 更精确地检查是否在视频页面
-    if (window.location.pathname.includes('/video/')) {
-        console.log('检测到视频页面，注入按钮');
-        const triggerBtn = injectButton();
-        
-        // 初始状态禁用小箭头
+  console.log('当前页面URL:', window.location.href);
+
+  // 更精确地检查是否在视频页面
+  if (window.location.pathname.includes('/video/')) {
+    console.log('检测到视频页面，注入按钮');
+    const triggerBtn = injectButton();
+
+    // 初始状态禁用小箭头
+    triggerBtn.style.cursor = 'not-allowed';
+    triggerBtn.style.opacity = '0.5';
+    triggerBtn.style.pointerEvents = 'none';
+
+    setTimeout(async () => {
+      try {
+        console.log('开始预加载服务和清晰度');
+        await connectWebSocket();
+        await preloadQualities();
+        console.log('清晰度预加载完成');
+
+        // 预加载成功才启用小箭头
+        triggerBtn.style.cursor = 'pointer';
+        triggerBtn.style.opacity = '1';
+        triggerBtn.style.pointerEvents = 'auto';
+      } catch (error) {
+        console.error('预加载失败:', error);
         triggerBtn.style.cursor = 'not-allowed';
         triggerBtn.style.opacity = '0.5';
         triggerBtn.style.pointerEvents = 'none';
-        
-        setTimeout(async () => {
-            try {
-                console.log('开始预加载服务和清晰度');
-                await connectWebSocket();
-                await preloadQualities();
-                console.log('清晰度预加载完成');
-                
-                // 预加载成功才启用小箭头
-                triggerBtn.style.cursor = 'pointer';
-                triggerBtn.style.opacity = '1';
-                triggerBtn.style.pointerEvents = 'auto';
-            } catch (error) {
-                console.error('预加载失败:', error);
-                triggerBtn.style.cursor = 'not-allowed';
-                triggerBtn.style.opacity = '0.5';
-                triggerBtn.style.pointerEvents = 'none';
-                
-                const errorTip = document.createElement('div');
-                errorTip.textContent = '加载失败，请刷新页面重试';
-                errorTip.style.cssText = `
+
+        const errorTip = document.createElement('div');
+        errorTip.textContent = '加载失败，请刷新页面重试';
+        errorTip.style.cssText = `
                     position: fixed;
                     right: 36px;
                     top: 50%;
@@ -429,11 +429,11 @@ window.addEventListener('load', async () => {
                     font-size: 12px;
                     z-index: 1000;
                 `;
-                document.body.appendChild(errorTip);
-                setTimeout(() => errorTip.remove(), 3000);
-            }
-        }, 2000);
-    }
+        document.body.appendChild(errorTip);
+        setTimeout(() => errorTip.remove(), 3000);
+      }
+    }, 2000);
+  }
 })
 
 // 注入按钮的函数
@@ -508,7 +508,7 @@ function injectButton() {
     align-items: stretch;
     position: relative;
   `
-  
+
   // 添加下载按钮组和状态文本
   const buttons = createDownloadButtons()
   buttonContainer.appendChild(buttons.container)
@@ -523,7 +523,7 @@ function injectButton() {
 
   // 禁用点击事件
   triggerBtn.style.pointerEvents = 'none'
-  
+
   // 添加触发器点击事件
   let isOpen = false
   triggerBtn.addEventListener('click', async () => {
@@ -531,25 +531,25 @@ function injectButton() {
     dropdown.style.display = isOpen ? 'block' : 'none'
     triggerBtn.style.transform = `translateY(-50%) rotate(${isOpen ? '180deg' : '0deg'})`
     triggerBtn.style.background = isOpen ? '#f4f4f4' : '#fff'
-    
+
     if (isOpen) {
-        connectWebSocket().then(() => {
-            console.log('服务已提前准备就绪')
-            return preloadQualities()  // 预加载清晰度
-        }).catch(error => {
-            console.error('服务准备失败:', error)
-        })
+      connectWebSocket().then(() => {
+        console.log('服务已提前准备就绪')
+        return preloadQualities()  // 预加载清晰度
+      }).catch(error => {
+        console.error('服务准备失败:', error)
+      })
     }
-    
+
   })
 
   // 点击外部只关闭下拉菜单，不断开连接
   document.addEventListener('click', (e) => {
     if (!triggerBtn.contains(e.target) && !dropdown.contains(e.target)) {
-        isOpen = false
-        dropdown.style.display = 'none'
-        triggerBtn.style.transform = 'translateY(-50%) rotate(0deg)'
-        triggerBtn.style.background = '#fff'
+      isOpen = false
+      dropdown.style.display = 'none'
+      triggerBtn.style.transform = 'translateY(-50%) rotate(0deg)'
+      triggerBtn.style.background = '#fff'
     }
   })
 
@@ -567,7 +567,7 @@ function injectButton() {
       buttons.videoBtn.style.cursor = 'not-allowed';
       buttons.settingsBtn.style.pointerEvents = 'none';
       buttons.settingsBtn.style.opacity = '0.6';
-      
+
       statusText.style.display = 'block'
       statusText.textContent = '正在准备下载...'
 
@@ -580,7 +580,7 @@ function injectButton() {
           window.removeEventListener('download_progress', progressHandler)
           statusText.textContent = '下载成功！'
           statusText.style.background = 'rgba(0, 180, 0, 0.8)'
-          
+
           setTimeout(() => {
             statusText.style.display = 'none'
             // 重新启用所有按钮
@@ -596,19 +596,19 @@ function injectButton() {
         }
       }
       window.addEventListener('download_progress', progressHandler)
-      
+
       // 发送下载请求
-      const response = await fetch(`${BACKEND_URL}/backend/audio-download`, {method: 'GET'})
-      
+      const response = await fetch(`${BACKEND_URL}/backend/audio-download`, { method: 'GET' })
+
       const result = await response.json()
-      
+
       if (!response.ok) {
         throw new Error(result.error || '下载失败')
       }
     } catch (error) {
       statusText.textContent = '下载失败: ' + error.message
       statusText.style.background = 'rgba(255, 0, 0, 0.8)'
-      
+
       setTimeout(() => {
         statusText.style.display = 'none'
         // 重新启用所有按钮
@@ -629,62 +629,29 @@ function injectButton() {
     if (buttons.videoBtn.disabled) return
 
     try {
-        // 禁用所有按钮
-        buttons.audioBtn.disabled = true;
-        buttons.audioBtn.style.background = '#b4b4b4';
-        buttons.audioBtn.style.cursor = 'not-allowed';
-        buttons.videoBtn.disabled = true;
-        buttons.videoBtn.style.background = '#b4b4b4';
-        buttons.videoBtn.style.cursor = 'not-allowed';
-        buttons.settingsBtn.style.pointerEvents = 'none';
-        buttons.settingsBtn.style.opacity = '0.6';
-        
-        statusText.style.display = 'block'
-        statusText.textContent = '正在准备下载...'
+      // 禁用所有按钮
+      buttons.audioBtn.disabled = true;
+      buttons.audioBtn.style.background = '#b4b4b4';
+      buttons.audioBtn.style.cursor = 'not-allowed';
+      buttons.videoBtn.disabled = true;
+      buttons.videoBtn.style.background = '#b4b4b4';
+      buttons.videoBtn.style.cursor = 'not-allowed';
+      buttons.settingsBtn.style.pointerEvents = 'none';
+      buttons.settingsBtn.style.opacity = '0.6';
 
-        // 添加进度更新监听
-        const progressHandler = (event) => {
-            const data = event.detail
-            const percentage = data.percentage
-            statusText.textContent = `下载中: ${percentage}%`
-            if (percentage === 100) {
-              window.removeEventListener('download_progress', progressHandler)
-              statusText.textContent = '下载成功！'
-              statusText.style.background = 'rgba(0, 180, 0, 0.8)'
-              setTimeout(() => {
-                  statusText.style.display = 'none'
-                  // 重新启用所有按钮
-                  buttons.audioBtn.disabled = false;
-                  buttons.audioBtn.style.background = '#00aeec';
-                  buttons.audioBtn.style.cursor = 'pointer';
-                  buttons.videoBtn.disabled = false;
-                  buttons.videoBtn.style.background = '#ff6b6b';
-                  buttons.videoBtn.style.cursor = 'pointer';
-                  buttons.settingsBtn.style.pointerEvents = 'auto';
-                  buttons.settingsBtn.style.opacity = '1';
-                }, 2000)
-              }
-        }
-        window.addEventListener('download_progress', progressHandler)
-        
-        // 发送下载请求
-        const response = await fetch(`${BACKEND_URL}/backend/video-download`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ quality })
-        })
-        
-        if (!response.ok) {
-            const result = await response.json()
-            throw new Error(result.error || '下载失败')
-        }
-        
-    } catch (error) {
-        statusText.textContent = '下载失败: ' + error.message
-        statusText.style.background = 'rgba(255, 0, 0, 0.8)'
-        setTimeout(() => {
+      statusText.style.display = 'block'
+      statusText.textContent = '正在准备下载...'
+
+      // 添加进度更新监听
+      const progressHandler = (event) => {
+        const data = event.detail
+        const percentage = data.percentage
+        statusText.textContent = `下载中: ${percentage}%`
+        if (percentage === 100) {
+          window.removeEventListener('download_progress', progressHandler)
+          statusText.textContent = '下载成功！'
+          statusText.style.background = 'rgba(0, 180, 0, 0.8)'
+          setTimeout(() => {
             statusText.style.display = 'none'
             // 重新启用所有按钮
             buttons.audioBtn.disabled = false;
@@ -695,7 +662,40 @@ function injectButton() {
             buttons.videoBtn.style.cursor = 'pointer';
             buttons.settingsBtn.style.pointerEvents = 'auto';
             buttons.settingsBtn.style.opacity = '1';
-        }, 3000)
+          }, 2000)
+        }
+      }
+      window.addEventListener('download_progress', progressHandler)
+
+      // 发送下载请求
+      const response = await fetch(`${BACKEND_URL}/backend/video-download`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ quality })
+      })
+
+      if (!response.ok) {
+        const result = await response.json()
+        throw new Error(result.error || '下载失败')
+      }
+
+    } catch (error) {
+      statusText.textContent = '下载失败: ' + error.message
+      statusText.style.background = 'rgba(255, 0, 0, 0.8)'
+      setTimeout(() => {
+        statusText.style.display = 'none'
+        // 重新启用所有按钮
+        buttons.audioBtn.disabled = false;
+        buttons.audioBtn.style.background = '#00aeec';
+        buttons.audioBtn.style.cursor = 'pointer';
+        buttons.videoBtn.disabled = false;
+        buttons.videoBtn.style.background = '#ff6b6b';
+        buttons.videoBtn.style.cursor = 'pointer';
+        buttons.settingsBtn.style.pointerEvents = 'auto';
+        buttons.settingsBtn.style.opacity = '1';
+      }, 3000)
     }
   }
 
@@ -704,22 +704,22 @@ function injectButton() {
     if (buttons.videoBtn.disabled) return
 
     try {
-        // 使用已加载的清晰度创建菜单
-        if (!cachedQualities) {
-            throw new Error('获取视频清晰度失败')
-        }
+      // 使用已加载的清晰度创建菜单
+      if (!cachedQualities) {
+        throw new Error('获取视频清晰度失败')
+      }
 
-        // 如果已经存在清晰度列表，则切换其显示状态
-        let qualityMenu = buttons.videoBtn.querySelector('.quality-menu')
-        if (qualityMenu) {
-            qualityMenu.style.display = qualityMenu.style.display === 'none' ? 'block' : 'none'
-            return
-        }
+      // 如果已经存在清晰度列表，则切换其显示状态
+      let qualityMenu = buttons.videoBtn.querySelector('.quality-menu')
+      if (qualityMenu) {
+        qualityMenu.style.display = qualityMenu.style.display === 'none' ? 'block' : 'none'
+        return
+      }
 
-        // 创建质量选择菜单
-        qualityMenu = document.createElement('div')
-        qualityMenu.className = 'quality-menu'  // 添加类名以便查找
-        qualityMenu.style.cssText = `
+      // 创建质量选择菜单
+      qualityMenu = document.createElement('div')
+      qualityMenu.className = 'quality-menu'  // 添加类名以便查找
+      qualityMenu.style.cssText = `
             position: absolute;
             top: 100%;
             left: 0;
@@ -731,11 +731,11 @@ function injectButton() {
             z-index: 1000;
             min-width: 100%;
         `
-        
-        // 直接使用缓存的清晰度
-        cachedQualities.forEach(quality => {
-            const option = document.createElement('div')
-            option.style.cssText = `
+
+      // 直接使用缓存的清晰度
+      cachedQualities.forEach(quality => {
+        const option = document.createElement('div')
+        option.style.cssText = `
                 padding: 6px 12px;
                 cursor: pointer;
                 font-size: 13px;
@@ -744,44 +744,44 @@ function injectButton() {
                 white-space: nowrap;
                 text-align: center;
             `
-            option.textContent = quality.name
-            option.onmouseover = () => option.style.background = '#f5f5f5'
-            option.onmouseout = () => option.style.background = 'transparent'
-            option.onclick = (e) => {
-                e.stopPropagation()  // 阻止事件冒泡
-                qualityMenu.style.display = 'none'
-                startVideoDownload(quality.code)
-            }
-            qualityMenu.appendChild(option)
-        })
-        
-        // 修改添加菜单的设置
-        buttons.videoBtn.style.position = 'relative'
-        buttons.videoBtn.appendChild(qualityMenu)
-        
-        // 全局点击事件只需注册一次
-        if (!window.qualityMenuHandler) {
-            window.qualityMenuHandler = (e) => {
-                const menu = buttons.videoBtn.querySelector('.quality-menu')
-                // 如果列表存在且显示中，且点击的不是列表内部和视频下载按钮本身
-                if (menu && menu.style.display !== 'none' && 
-                    !menu.contains(e.target) && 
-                    e.target !== buttons.videoBtn) {
-                    menu.style.display = 'none'
-                }
-            }
-            // 确保在按钮点击事件之后执行
-            document.addEventListener('click', window.qualityMenuHandler, true)
+        option.textContent = quality.name
+        option.onmouseover = () => option.style.background = '#f5f5f5'
+        option.onmouseout = () => option.style.background = 'transparent'
+        option.onclick = (e) => {
+          e.stopPropagation()  // 阻止事件冒泡
+          qualityMenu.style.display = 'none'
+          startVideoDownload(quality.code)
         }
-        
+        qualityMenu.appendChild(option)
+      })
+
+      // 修改添加菜单的设置
+      buttons.videoBtn.style.position = 'relative'
+      buttons.videoBtn.appendChild(qualityMenu)
+
+      // 全局点击事件只需注册一次
+      if (!window.qualityMenuHandler) {
+        window.qualityMenuHandler = (e) => {
+          const menu = buttons.videoBtn.querySelector('.quality-menu')
+          // 如果列表存在且显示中，且点击的不是列表内部和视频下载按钮本身
+          if (menu && menu.style.display !== 'none' &&
+            !menu.contains(e.target) &&
+            e.target !== buttons.videoBtn) {
+            menu.style.display = 'none'
+          }
+        }
+        // 确保在按钮点击事件之后执行
+        document.addEventListener('click', window.qualityMenuHandler, true)
+      }
+
     } catch (error) {
-        statusText.textContent = '获取视频清晰度失败: ' + error.message
-        statusText.style.background = 'rgba(255, 0, 0, 0.8)'
-        statusText.style.display = 'block'
-        
-        setTimeout(() => {
-            statusText.style.display = 'none'
-        }, 3000)
+      statusText.textContent = '获取视频清晰度失败: ' + error.message
+      statusText.style.background = 'rgba(255, 0, 0, 0.8)'
+      statusText.style.display = 'block'
+
+      setTimeout(() => {
+        statusText.style.display = 'none'
+      }, 3000)
     }
   })
 

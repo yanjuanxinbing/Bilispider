@@ -53,9 +53,9 @@ let currentConfig = loadConfig()
 let windows = new Set()
 
 function startFlaskServer() {
-    const pythonPath = path.join(__dirname, '.venv', 'Scripts', 'python.exe');
-    const backendPath = path.join(__dirname, 'app.py');
-    flaskProcess = spawn(pythonPath, [backendPath]);
+  const pythonPath = path.join(__dirname, '.venv', 'Scripts', 'python.exe');
+  const backendPath = path.join(__dirname, 'app.py');
+  flaskProcess = spawn(pythonPath, [backendPath]);
 }
 
 function createWindow() {
@@ -131,13 +131,13 @@ ipcMain.handle('select-directory', async () => {
     if (!result.canceled && result.filePaths.length > 0) {
       const selectedPath = result.filePaths[0]
       console.log('the selected path is:', selectedPath)
-      
+
       try {
 
         // 更新配置
         currentConfig.downloadDir = selectedPath
         saveConfig(currentConfig)
-        
+
         // 通知Python后端更新下载目录
         const response = await fetchWithTimeout(`${BACKEND_URL}/backend/update-download-dir`, {
           method: 'POST',
@@ -157,20 +157,20 @@ ipcMain.handle('select-directory', async () => {
         return { success: true, path: data.path }
       } catch (error) {
         console.error('更新下载目录失败:', error)
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: error.message || '更新下载目录失败',
           details: error.toString()
         }
       }
     }
-    
+
     // 用户取消选择时返回特定状态
     return { success: false, canceled: true }
   } catch (error) {
     console.error('选择目录操作失败:', error)
-    return { 
-      success: false, 
+    return {
+      success: false,
       canceled: false,
       error: error.message || '选择目录失败',
       details: error.toString()
@@ -199,5 +199,5 @@ ipcMain.handle('get-current-directory', async () => {
 
 // 添加获取 cookies 的处理
 ipcMain.handle('get-cookies', async (event, url) => {
-    return await session.defaultSession.cookies.get({url})
+  return await session.defaultSession.cookies.get({ url })
 })

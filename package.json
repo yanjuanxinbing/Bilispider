@@ -1,7 +1,7 @@
 {
-  "name": "bi",
+  "name": "bilispider",
   "version": "1.0.0",
-  "description": "bi",
+  "description": "bilispider",
   "main": "app.js",
   "scripts": {
     "start": "electron ."
