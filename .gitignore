@@ -1,2 +1,6 @@
 /node_modules
 /.vscode
+/.venv
+/启动.vbs
+/zrun.bat
+/__pycache__
