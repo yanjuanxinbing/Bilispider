@@ -2,7 +2,7 @@
   "name": "bilispider",
   "version": "1.0.0",
   "description": "bilispider",
-  "main": "app.js",
+  "main": "app.cjs",
   "scripts": {
     "start": "electron ."
   },

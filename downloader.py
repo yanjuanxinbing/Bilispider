@@ -5,20 +5,10 @@ import aiohttp
 import subprocess
 
 class Downloader:
-    def __init__(self, callback):
-        self.callback = callback
-        self.dir = os.path.join(os.path.expanduser("~"), "Desktop")
-        self.table = str.maketrans(r'\/:"*?<>|', '_________')
-        self.session: aiohttp.ClientSession
-
-    def set_session(self, session):
+    def __init__(self, session: aiohttp.ClientSession, callback):
         self.session = session
-
-    def set_dir(self, dir):
-        self.dir = dir
-
-    def get_dir(self):
-        return self.dir
+        self.callback = callback
+        self.table = str.maketrans(r'\/:"*?<>|', '_________')
 
     async def load(self, bv, p, headers):
         self.headers = headers
@@ -88,21 +78,21 @@ class Downloader:
             mm.close()
             os.close(fd)
 
-    async def audio_download(self):
+    async def audio_download(self, dir):
         try:
-            path = os.path.join(self.dir, f"{self.title}.m4a")
+            path = os.path.join(dir, f"{self.title}.m4a")
             await self.download_file(self.audio_url, path, lambda p: self.callback(p, self.title))
             return path
         except Exception as e:
             self.callback(0, f"下载失败: {e}")
 
-    async def video_download(self, quality):
+    async def video_download(self, dir, quality):
         ap = 0
         vp = 0
         try:
-            temp_audio = os.path.join(self.dir, f"{self.title}_temp.m4a")
-            temp_video = os.path.join(self.dir, f"{self.title}_temp.mp4")
-            video = os.path.join(self.dir, f"{self.title}.mp4")
+            temp_audio = os.path.join(dir, f"{self.title}_temp.m4a")
+            temp_video = os.path.join(dir, f"{self.title}_temp.mp4")
+            video = os.path.join(dir, f"{self.title}.mp4")
 
             def progress_wrapper(p, file_type):
                 nonlocal ap, vp

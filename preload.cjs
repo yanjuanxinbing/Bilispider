@@ -579,7 +579,14 @@ function injectButton() {
       window.addEventListener('download_progress', progressHandler)
 
       // 发送下载请求
-      const response = await fetch(`${BACKEND_URL}/backend/audio-download`, { method: 'GET' })
+      const dir = await electronAPI.getCurrentDirectory()
+      const response = await fetch(`${BACKEND_URL}/backend/audio-download`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ dir })
+      })
 
       const result = await response.json()
 
@@ -649,12 +656,13 @@ function injectButton() {
       window.addEventListener('download_progress', progressHandler)
 
       // 发送下载请求
+      const dir = await electronAPI.getCurrentDirectory()
       const response = await fetch(`${BACKEND_URL}/backend/video-download`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ quality })
+        body: JSON.stringify({ dir, quality })
       })
 
       if (!response.ok) {
