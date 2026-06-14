@@ -90,7 +90,7 @@ ipcMain.handle('select-directory', async () => {
         currentConfig.downloadDir = selectedPath
         saveConfig(currentConfig)
 
-        return { success: true, path: data.path }
+        return { success: true, path: selectedPath }
       } catch (error) {
         console.error('更新下载目录失败:', error)
         return {
