@@ -9,6 +9,10 @@ class Downloader:
         self.callback = callback
         self.dir = os.path.join(os.path.expanduser("~"), "Desktop")
         self.table = str.maketrans(r'\/:"*?<>|', '_________')
+        self.session: aiohttp.ClientSession
+
+    def set_session(self, session):
+        self.session = session
 
     def set_dir(self, dir):
         self.dir = dir
@@ -21,7 +25,7 @@ class Downloader:
 
         try:
             url = f"https://api.bilibili.com/x/web-interface/view?bvid={bv}"
-            async with aiohttp.request("GET", url, headers=headers) as res:
+            async with self.session.get(url, headers=headers) as res:
                 data = await res.json()
             data = data["data"]["pages"][p - 1]
             cid = data["cid"]
@@ -31,7 +35,7 @@ class Downloader:
 
         try:
             url = f"https://api.bilibili.com/x/player/wbi/playurl?&bvid={bv}&cid={cid}&fnval=4048"
-            async with aiohttp.request("GET", url, headers=headers) as res:
+            async with self.session.get(url, headers=headers) as res:
                 data = await res.json()
             self.audio_url = data['data']['dash']['audio'][0]['baseUrl']
             videos = data['data']['dash']['video']
@@ -45,11 +49,11 @@ class Downloader:
         except Exception as e:
             raise Exception(f"获取视频清晰度失败: {e}")
 
-    async def download_chunk(self, mm, url, session, start, end, downloaded, total_size, callback):
+    async def download_chunk(self, mm, url, start, end, downloaded, total_size, callback):
         try:
             headers = self.headers.copy()
             headers['Range'] = f'bytes={start}-{end}'
-            async with session.get(url, headers=headers) as res:
+            async with self.session.get(url, headers=headers) as res:
                 async for data in res.content.iter_chunked(256 * 1024):
                     mm[start:start + len(data)] = data
                     start += len(data)
@@ -61,24 +65,23 @@ class Downloader:
     async def download_file(self, url, file_path, callback):
         downloaded = [0]
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=self.headers) as res:
-                    total_size = int(res.headers['content-length'])
-                fd = os.open(file_path, os.O_CREAT | os.O_RDWR)
-                os.lseek(fd, total_size - 1, os.SEEK_SET)
-                os.write(fd, b'\0')
-                mm = mmap.mmap(fd, total_size, access=mmap.ACCESS_WRITE)
-                chunk_size = min(max(5 * 1024 * 1024, total_size // 10), 10 * 1024 * 1024)
-                tasks = []
-                for i in range(0, total_size, chunk_size):
-                    end = min(i + chunk_size - 1, total_size - 1)
-                    task = self.download_chunk(
-                        mm, url, session,
-                        i, end, downloaded, total_size,
-                        callback
-                    )
-                    tasks.append(task)
-                await asyncio.gather(*tasks)
+            async with self.session.get(url, headers=self.headers) as res:
+                total_size = int(res.headers['content-length'])
+            fd = os.open(file_path, os.O_CREAT | os.O_RDWR)
+            os.lseek(fd, total_size - 1, os.SEEK_SET)
+            os.write(fd, b'\0')
+            mm = mmap.mmap(fd, total_size, access=mmap.ACCESS_WRITE)
+            chunk_size = min(max(5 * 1024 * 1024, total_size // 10), 10 * 1024 * 1024)
+            tasks = []
+            for i in range(0, total_size, chunk_size):
+                end = min(i + chunk_size - 1, total_size - 1)
+                task = self.download_chunk(
+                    mm, url,
+                    i, end, downloaded, total_size,
+                    callback
+                )
+                tasks.append(task)
+            await asyncio.gather(*tasks)
         except Exception as e:
             raise Exception(f"下载文件失败: {e}")
         finally:

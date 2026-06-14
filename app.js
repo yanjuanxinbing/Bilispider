@@ -1,6 +1,5 @@
 const { app, BrowserWindow, session, ipcMain, dialog } = require('electron')
 const path = require('path')
-const fetch = require('node-fetch')
 const { spawn } = require('child_process')
 const fs = require('fs')
 
@@ -53,7 +52,8 @@ let currentConfig = loadConfig()
 let windows = new Set()
 
 function startFlaskServer() {
-  const pythonPath = path.join(__dirname, '.venv', 'Scripts', 'python.exe');
+  // const pythonPath = path.join(__dirname, '.venv', 'Scripts', 'python.exe');
+  const pythonPath = "python";
   const backendPath = path.join(__dirname, 'app.py');
   flaskProcess = spawn(pythonPath, [backendPath]);
 }
@@ -65,7 +65,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false,
+      sandbox: true,
       webSecurity: true,
       preload: path.join(__dirname, 'preload.js')
     }
@@ -90,6 +90,7 @@ function createWindow() {
 
   // 加载B站首页
   mainWindow.loadURL('https://www.bilibili.com')
+  mainWindow.webContents.openDevTools()
 
   return mainWindow
 }

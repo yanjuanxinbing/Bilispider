@@ -9,8 +9,6 @@
   "author": "aq",
   "license": "ISC",
   "dependencies": {
-    "electron": "^42.4.0",
-    "node-fetch": "2.6.7",
-    "socket.io-client": "^4.8.1"
+    "electron": "^42.4.0"
   }
 }

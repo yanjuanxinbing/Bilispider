@@ -1,17 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron')
-const io = require('socket.io-client')
-
-// WebSocket 配置
-const WS_CONFIG = {
-  url: 'http://localhost:5001',
-  reconnectDelay: 1000,
-  maxRetries: 3,
-  timeout: 60000
-}
 
 let socket = null
-let isServerStarting = false
-let connectTimeout = null
 
 // 添加一个变量存储预加载的清晰度列表
 let cachedQualities = null
@@ -33,7 +22,6 @@ async function preloadQualities() {
   qualityLoadPromise = (async () => {
     try {
       const url = window.location.href
-      const ua = window.navigator.userAgent
       const cookie = await getCookies()
 
       const response = await fetch(`${BACKEND_URL}/backend/get-video-qualities`, {
@@ -41,7 +29,7 @@ async function preloadQualities() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ url, ua, cookie })
+        body: JSON.stringify({ url, cookie })
       })
 
       if (!response.ok) {
@@ -65,43 +53,36 @@ async function preloadQualities() {
   return qualityLoadPromise
 }
 
-// 改进的 WebSocket 连接管理
 async function connectWebSocket() {
-  if (socket?.connected) {
-    console.log('WebSocket已连接，无需重新连接')
-    return socket
-  }
+  return new Promise((resolve, reject) => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      resolve(socket)
+      return
+    }
 
-  if (isServerStarting) {
-    console.log('服务正在启动中，请稍候...')
-    return null
-  }
+    socket = new WebSocket('ws://localhost:5001/ws')
 
-  try {
-    isServerStarting = true
-    clearTimeout(connectTimeout)
+    socket.onopen = () => {
+      console.log('WebSocket已连接')
+      resolve(socket)
+    }
 
-    // 设置连接超时
-    connectTimeout = setTimeout(() => {
-      if (!socket?.connected) {
-        console.log('WebSocket连接超时')
-        throw new Error('连接超时')
-      }
-    }, WS_CONFIG.timeout)
-
-    socket = io(WS_CONFIG.url)
-
-    socket.on('download_progress', (data) => {
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data)
       console.log('收到下载进度:', data)
       window.dispatchEvent(new CustomEvent('download_progress', { detail: data }))
-    })
+    }
 
-    return socket
+    socket.onerror = (err) => {
+      console.error('WebSocket错误:', err)
+      reject(err)
+    }
 
-  } catch (error) {
-    console.error('服务启动失败:', error)
-    throw error
-  }
+    socket.onclose = () => {
+      console.log('WebSocket已断开')
+      socket = null
+    }
+  })
 }
 
 // 定义要暴露的API
