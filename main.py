@@ -11,7 +11,7 @@ worker: Downloader
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=16)) as session:
         global worker
         worker = Downloader(session, progress_callback)
         yield
@@ -94,11 +94,10 @@ async def get_video_qualities(payload: QualityPayload):
             p = 1
         else:
             end = url.find('&', start)
-            p = url[start:] if end == -1 else url[start:end]
-            p = int(p)
+            p = int(url[start:] if end == -1 else url[start:end])
 
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
             "Cookie": payload.cookie,
             "Referer": "https://www.bilibili.com/"
         }

@@ -521,7 +521,6 @@ function injectButton() {
         console.error('服务准备失败:', error)
       })
     }
-
   })
 
   // 点击外部只关闭下拉菜单，不断开连接

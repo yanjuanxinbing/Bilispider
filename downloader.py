@@ -17,9 +17,15 @@ class Downloader:
             url = f"https://api.bilibili.com/x/web-interface/view?bvid={bv}"
             async with self.session.get(url, headers=headers) as res:
                 data = await res.json()
-            data = data["data"]["pages"][p - 1]
-            cid = data["cid"]
-            self.title = data["part"].translate(self.table)
+            data = data["data"]
+            pages = data["pages"]
+            cid = pages[p - 1]["cid"]
+            if len(pages) > 1:
+                title = pages[p - 1]["part"]
+            else:
+                title = data["title"]
+
+            self.title = title.translate(self.table)
         except Exception as e:
             raise Exception(f"获取视频信息失败: {e}")
 
@@ -52,31 +58,34 @@ class Downloader:
         except Exception as e:
             raise Exception(f"分片下载失败: {e}")
 
-    async def download_file(self, url, file_path, callback):
+    async def download_file(self, url, file_path, callback, chunk_size=2 * 1024 * 1024):
         downloaded = [0]
+        fd = None
+        mm = None
         try:
             async with self.session.get(url, headers=self.headers) as res:
                 total_size = int(res.headers['content-length'])
+
             fd = os.open(file_path, os.O_CREAT | os.O_RDWR)
             os.lseek(fd, total_size - 1, os.SEEK_SET)
             os.write(fd, b'\0')
             mm = mmap.mmap(fd, total_size, access=mmap.ACCESS_WRITE)
-            chunk_size = min(max(5 * 1024 * 1024, total_size // 10), 10 * 1024 * 1024)
+
             tasks = []
             for i in range(0, total_size, chunk_size):
                 end = min(i + chunk_size - 1, total_size - 1)
                 task = self.download_chunk(
-                    mm, url,
-                    i, end, downloaded, total_size,
-                    callback
+                    mm, url, i, end, downloaded, total_size, callback
                 )
                 tasks.append(task)
             await asyncio.gather(*tasks)
         except Exception as e:
             raise Exception(f"下载文件失败: {e}")
         finally:
-            mm.close()
-            os.close(fd)
+            if mm is not None:
+                mm.close()
+            if fd is not None:
+                os.close(fd)
 
     async def audio_download(self, dir):
         try:
