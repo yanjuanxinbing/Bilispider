@@ -1,22 +1,12 @@
 import asyncio
 import aiohttp
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from downloader import Downloader
 import uvicorn
 
-worker: Downloader
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=16)) as session:
-        global worker
-        worker = Downloader(session, progress_callback)
-        yield
-
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,17 +14,33 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-QUALITY_MAP = {
-    127: '8K', 125: '4K 超清', 120: '4K 超清', 116: '1080P 60帧',
-    112: '1080P+', 80: '1080P', 64: '720P', 32: '480P', 16: '360P'
-}
-
-connected_clients: set[WebSocket] = set()
-
 def progress_callback(percentage, title):
     data = {'percentage': percentage, 'title': title}
     # 在运行中的事件循环里调度广播任务
     asyncio.create_task(broadcast(data))
+
+worker = Downloader(progress_callback)
+
+class CookiePayload(BaseModel):
+    cookies: dict
+
+@app.post('/backend/update-cookies')
+async def update_cookies(payload: CookiePayload):
+    connector = aiohttp.TCPConnector(limit=16)
+    headers={
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+        "Referer": "https://www.bilibili.com/"
+    }
+
+    new_session = aiohttp.ClientSession(connector=connector, headers=headers, cookies=payload.cookies)
+    if worker.session is None:
+        worker.session = new_session
+    else:
+        old_session = worker.session
+        worker.session = new_session
+        await old_session.close()
+
+connected_clients: set[WebSocket] = set()
 
 async def broadcast(data):
     dead = set()
@@ -78,9 +84,13 @@ async def handle_video_download(payload: VideoPayload):
     except Exception as e:
         return {"error": f"发生未知错误: {e}"}
 
+QUALITY_MAP = {
+    127: '8K', 125: '4K 超清', 120: '4K 超清', 116: '1080P 60帧',
+    112: '1080P+', 80: '1080P', 64: '720P', 32: '480P', 16: '360P'
+}
+
 class QualityPayload(BaseModel):
     url: str
-    cookie: str
 
 @app.post('/backend/get-video-qualities')
 async def get_video_qualities(payload: QualityPayload):
@@ -96,13 +106,7 @@ async def get_video_qualities(payload: QualityPayload):
             end = url.find('&', start)
             p = int(url[start:] if end == -1 else url[start:end])
 
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
-            "Cookie": payload.cookie,
-            "Referer": "https://www.bilibili.com/"
-        }
-
-        quality_codes = await worker.load(bv, p, headers)
+        quality_codes = await worker.load(bv, p)
         available_qualities = [{'code': c, 'name': QUALITY_MAP.get(c, f'未知({c})')} for c in quality_codes]
         return {"qualities": available_qualities}
     except Exception as e:

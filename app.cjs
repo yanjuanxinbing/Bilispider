@@ -7,11 +7,31 @@ let flaskProcess = null
 
 // 配置文件路径
 const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json')
+const CRITICAL_COOKIES = new Set(['DedeUserID', 'SESSDATA'])
 
 app.whenReady().then(() => {
-  createWindow('https://www.bilibili.com');
   startFlaskServer();
+  createWindow('https://www.bilibili.com');
+  updateSessionCookies();
+
+  session.defaultSession.cookies.on('changed', (event, cookie, cause, removed) => {
+    if (!cookie.domain.includes('bilibili.com')) return
+    if (!CRITICAL_COOKIES.has(cookie.name)) return
+
+    updateSessionCookies()
+  })
 });
+
+async function updateSessionCookies() {
+  const cookies = await session.defaultSession.cookies.get({ url: 'https://www.bilibili.com' })
+  const cookieDict = Object.fromEntries(cookies.map(c => [c.name, c.value]))
+  // 通知后端更新 cookie
+  await fetch('http://localhost:5001/backend/update-cookies', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cookies: cookieDict })
+  })
+}
 
 // 加载配置
 function loadConfig() {
@@ -58,7 +78,7 @@ function createWindow(url) {
   })
 
   mainWindow.loadURL(url)
-  mainWindow.setMenu(null)
+  // mainWindow.setMenu(null)
 
   // 监听新窗口创建
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -117,9 +137,4 @@ ipcMain.handle('select-directory', async () => {
 // 获取当前下载目录
 ipcMain.handle('get-current-directory', async () => {
   return currentConfig.downloadDir
-})
-
-// 添加获取 cookies 的处理
-ipcMain.handle('get-cookies', async (event, url) => {
-  return await session.defaultSession.cookies.get({ url })
 })

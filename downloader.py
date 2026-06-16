@@ -5,17 +5,15 @@ import aiohttp
 import subprocess
 
 class Downloader:
-    def __init__(self, session: aiohttp.ClientSession, callback):
-        self.session = session
+    def __init__(self, callback):
         self.callback = callback
+        self.session: aiohttp.ClientSession | None = None
         self.table = str.maketrans(r'\/:"*?<>|', '_________')
 
-    async def load(self, bv, p, headers):
-        self.headers = headers
-
+    async def load(self, bv, p):
         try:
             url = f"https://api.bilibili.com/x/web-interface/view?bvid={bv}"
-            async with self.session.get(url, headers=headers) as res:
+            async with self.session.get(url) as res:
                 data = await res.json()
             data = data["data"]
             pages = data["pages"]
@@ -31,7 +29,7 @@ class Downloader:
 
         try:
             url = f"https://api.bilibili.com/x/player/wbi/playurl?&bvid={bv}&cid={cid}&fnval=4048"
-            async with self.session.get(url, headers=headers) as res:
+            async with self.session.get(url) as res:
                 data = await res.json()
             self.audio_url = data['data']['dash']['audio'][0]['baseUrl']
             videos = data['data']['dash']['video']
@@ -47,8 +45,7 @@ class Downloader:
 
     async def download_chunk(self, mm, url, start, end, downloaded, total_size, callback):
         try:
-            headers = self.headers.copy()
-            headers['Range'] = f'bytes={start}-{end}'
+            headers = {"Range": f"bytes={start}-{end}"}
             async with self.session.get(url, headers=headers) as res:
                 async for data in res.content.iter_chunked(256 * 1024):
                     mm[start:start + len(data)] = data
@@ -63,7 +60,7 @@ class Downloader:
         fd = None
         mm = None
         try:
-            async with self.session.get(url, headers=self.headers) as res:
+            async with self.session.get(url) as res:
                 total_size = int(res.headers['content-length'])
 
             fd = os.open(file_path, os.O_CREAT | os.O_RDWR)

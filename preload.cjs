@@ -22,14 +22,13 @@ async function preloadQualities() {
   qualityLoadPromise = (async () => {
     try {
       const url = window.location.href
-      const cookie = await getCookies()
 
       const response = await fetch(`${BACKEND_URL}/backend/get-video-qualities`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ url, cookie })
+        body: JSON.stringify({ url })
       })
 
       if (!response.ok) {
@@ -97,12 +96,6 @@ try {
   console.log('API 已成功暴露到渲染进程')
 } catch (error) {
   console.error('API 暴露失败:', error)
-}
-
-// 添加获取 cookie 的辅助函数
-async function getCookies() {
-  const cookies = await ipcRenderer.invoke('get-cookies', 'https://www.bilibili.com')
-  return cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ')
 }
 
 // 创建设置面板
