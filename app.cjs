@@ -3,34 +3,38 @@ const path = require('path')
 const { spawn } = require('child_process')
 const fs = require('fs')
 
-let flaskProcess = null
+let backend = null
 
 // 配置文件路径
 const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json')
 const CRITICAL_COOKIES = new Set(['DedeUserID', 'SESSDATA'])
 
-app.whenReady().then(() => {
-  startFlaskServer();
+app.whenReady().then(async () => {
+  startBackendServer();
   createWindow('https://www.bilibili.com');
-  updateSessionCookies();
+  await updateSessionCookies()
 
   session.defaultSession.cookies.on('changed', (event, cookie, cause, removed) => {
     if (!cookie.domain.includes('bilibili.com')) return
     if (!CRITICAL_COOKIES.has(cookie.name)) return
-
     updateSessionCookies()
   })
 });
 
-async function updateSessionCookies() {
-  const cookies = await session.defaultSession.cookies.get({ url: 'https://www.bilibili.com' })
-  const cookieDict = Object.fromEntries(cookies.map(c => [c.name, c.value]))
-  // 通知后端更新 cookie
-  await fetch('http://localhost:5001/backend/update-cookies', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cookies: cookieDict })
-  })
+async function updateSessionCookies(retry = 5) {
+  try {
+    const cookies = await session.defaultSession.cookies.get({ url: 'https://www.bilibili.com' })
+    const cookieDict = Object.fromEntries(cookies.map(c => [c.name, c.value]))
+    await fetch('http://localhost:5001/backend/update-cookies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cookies: cookieDict })
+    })
+  } catch (e) {
+    if (retry > 0) {
+      setTimeout(() => updateSessionCookies(retry - 1), 1000)
+    }
+  }
 }
 
 // 加载配置
@@ -61,11 +65,10 @@ function saveConfig(config) {
 // 获取当前配置
 let currentConfig = loadConfig()
 
-function startFlaskServer() {
-  // const pythonPath = path.join(__dirname, '.venv', 'Scripts', 'python.exe');
-  const pythonPath = "python";
+function startBackendServer() {
+  const pythonPath = path.join(__dirname, '.venv', 'Scripts', 'python.exe');
   const backendPath = path.join(__dirname, 'main.py');
-  flaskProcess = spawn(pythonPath, [backendPath]);
+  backend = spawn(pythonPath, [backendPath]);
 }
 
 function createWindow(url) {
@@ -78,7 +81,6 @@ function createWindow(url) {
   })
 
   mainWindow.loadURL(url)
-  // mainWindow.setMenu(null)
 
   // 监听新窗口创建
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -90,7 +92,7 @@ function createWindow(url) {
 // 修改应用退出事件
 app.on('before-quit', async (event) => {
   event.preventDefault()
-  spawn('taskkill', ['/pid', flaskProcess.pid, '/f', '/t'])
+  spawn('taskkill', ['/pid', backend.pid, '/f', '/t'])
   app.exit()
 })
 

@@ -5,3 +5,9 @@
 /zrun.bat
 /__pycache__
 /t.py
+/ffmpeg.exe
+/main.dist
+/main.exe
+/dist
+/main.build
+/main.onefile-build
