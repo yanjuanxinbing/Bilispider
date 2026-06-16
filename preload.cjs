@@ -357,57 +357,83 @@ function createDownloadButtons() {
   }
 }
 
-// 修改页面加载事件监听
-window.addEventListener('load', async () => {
-  // 检查是否在视频页面
-  if (window.location.pathname.includes('/video/')) {
-    console.log('检测到视频页面，注入按钮');
-    const triggerBtn = injectButton();
-
-    // 初始状态禁用小箭头
+// 工具函数：禁用/启用触发按钮
+function setTriggerDisabled(triggerBtn, disabled) {
+  if (disabled) {
     triggerBtn.style.cursor = 'not-allowed';
     triggerBtn.style.opacity = '0.5';
     triggerBtn.style.pointerEvents = 'none';
+  } else {
+    triggerBtn.style.cursor = 'pointer';
+    triggerBtn.style.opacity = '1';
+    triggerBtn.style.pointerEvents = 'auto';
+  }
+}
 
-    try {
-      console.log('开始预加载服务和清晰度');
-      await connectWebSocket();
-      await preloadQualities();
-      console.log('清晰度预加载完成');
+// 显示错误提示
+function showErrorTip(message) {
+  const errorTip = document.createElement('div');
+  errorTip.textContent = message;
+  errorTip.style.cssText = `
+    position: fixed;
+    right: 36px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 0, 0, 0.8);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 1000;
+  `;
+  document.body.appendChild(errorTip);
+  setTimeout(() => errorTip.remove(), 3000);
+}
 
-      // 预加载成功才启用小箭头
-      triggerBtn.style.cursor = 'pointer';
-      triggerBtn.style.opacity = '1';
-      triggerBtn.style.pointerEvents = 'auto';
-    } catch (error) {
-      console.error('预加载失败:', error);
-      triggerBtn.style.cursor = 'not-allowed';
-      triggerBtn.style.opacity = '0.5';
-      triggerBtn.style.pointerEvents = 'none';
+// 视频页通用处理：注入按钮（已注入则复用） + 预加载清晰度
+async function handleVideoPage() {
+  let triggerBtn = document.querySelector('.download-trigger-btn');
 
-      const errorTip = document.createElement('div');
-      errorTip.textContent = '加载失败，请刷新页面重试';
-      errorTip.style.cssText = `
-                    position: fixed;
-                    right: 36px;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    background: rgba(255, 0, 0, 0.8);
-                    color: #fff;
-                    padding: 8px 12px;
-                    border-radius: 4px;
-                    font-size: 12px;
-                    z-index: 1000;
-                `;
-      document.body.appendChild(errorTip);
-      setTimeout(() => errorTip.remove(), 3000);
-    }
+  if (!triggerBtn) {
+    console.log('检测到视频页面，注入按钮');
+    triggerBtn = injectButton();
+  } else {
+    // 已存在按钮（来自 SPA 路由切换），关闭可能还开着的旧下拉
+    const dropdown = document.querySelector('.download-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+  }
+
+  // 预加载期间禁用小箭头
+  setTriggerDisabled(triggerBtn, true);
+
+  try {
+    console.log('开始预加载服务和清晰度');
+    await connectWebSocket();
+    await preloadQualities();
+    console.log('清晰度预加载完成');
+
+    // 预加载成功才启用小箭头
+    setTriggerDisabled(triggerBtn, false);
+  } catch (error) {
+    console.error('预加载失败:', error);
+    setTriggerDisabled(triggerBtn, true);
+    showErrorTip('加载失败，请刷新页面重试');
+  }
+}
+
+// 首次加载
+window.addEventListener('load', async () => {
+  if (window.location.pathname.includes('/video/')) {
+    await handleVideoPage();
   }
 })
 
-window.navigation.addEventListener('navigatesuccess', () => {
-  const currentUrl = window.location.href;
-
+// SPA 路由变化（视频页 → 视频页），重新预加载新视频的清晰度
+window.navigation.addEventListener('navigatesuccess', async () => {
+  if (window.location.pathname.includes('/video/')) {
+    console.log('navigatesuccess: 切换视频，重新预加载清晰度');
+    await handleVideoPage();
+  }
 })
 
 // 注入按钮的函数
@@ -494,9 +520,6 @@ function injectButton() {
   // 添加到页面
   document.body.appendChild(triggerBtn)
   document.body.appendChild(dropdown)
-
-  // 禁用点击事件
-  triggerBtn.style.pointerEvents = 'none'
 
   // 添加触发器点击事件
   let isOpen = false
@@ -685,7 +708,9 @@ function injectButton() {
     if (buttons.videoBtn.disabled) return
 
     try {
-      // 使用已加载的清晰度创建菜单
+      // 使用当前页缓存的清晰度创建菜单
+      const currentUrl = window.location.href
+      const cachedQualities = qualityCache[currentUrl]
       if (!cachedQualities) {
         throw new Error('获取视频清晰度失败')
       }
