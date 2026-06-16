@@ -92,7 +92,7 @@ function createWindow(url) {
 // 修改应用退出事件
 app.on('before-quit', async (event) => {
   event.preventDefault()
-  spawn('taskkill', ['/pid', backend.pid, '/f', '/t'])
+  backend.kill()
   app.exit()
 })
 

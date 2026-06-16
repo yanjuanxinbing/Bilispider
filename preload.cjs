@@ -3,7 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron')
 let socket = null
 
 // 添加一个变量存储预加载的清晰度列表
-let cachedQualities = null
+const qualityCache = {}
 
 // 添加预加载状态变量
 let isQualityLoading = false
@@ -18,11 +18,16 @@ async function preloadQualities() {
     return qualityLoadPromise
   }
 
+  const url = window.location.href
+
+  // 命中缓存直接返回
+  if (qualityCache[url]) {
+    return qualityCache[url]
+  }
+
   isQualityLoading = true
   qualityLoadPromise = (async () => {
     try {
-      const url = window.location.href
-
       const response = await fetch(`${BACKEND_URL}/backend/get-video-qualities`, {
         method: 'POST',
         headers: {
@@ -36,12 +41,11 @@ async function preloadQualities() {
       }
 
       const result = await response.json()
-      cachedQualities = result.qualities
+      qualityCache[url] = result.qualities
       console.log('清晰度列表预加载成功')
       return result.qualities
     } catch (error) {
       console.error('预加载清晰度失败:', error)
-      cachedQualities = null
       throw error
     } finally {
       isQualityLoading = false
@@ -75,11 +79,6 @@ async function connectWebSocket() {
     socket.onerror = (err) => {
       console.error('WebSocket错误:', err)
       reject(err)
-    }
-
-    socket.onclose = () => {
-      console.log('WebSocket已断开')
-      socket = null
     }
   })
 }
@@ -360,9 +359,7 @@ function createDownloadButtons() {
 
 // 修改页面加载事件监听
 window.addEventListener('load', async () => {
-  console.log('当前页面URL:', window.location.href);
-
-  // 更精确地检查是否在视频页面
+  // 检查是否在视频页面
   if (window.location.pathname.includes('/video/')) {
     console.log('检测到视频页面，注入按钮');
     const triggerBtn = injectButton();
@@ -372,26 +369,25 @@ window.addEventListener('load', async () => {
     triggerBtn.style.opacity = '0.5';
     triggerBtn.style.pointerEvents = 'none';
 
-    setTimeout(async () => {
-      try {
-        console.log('开始预加载服务和清晰度');
-        await connectWebSocket();
-        await preloadQualities();
-        console.log('清晰度预加载完成');
+    try {
+      console.log('开始预加载服务和清晰度');
+      await connectWebSocket();
+      await preloadQualities();
+      console.log('清晰度预加载完成');
 
-        // 预加载成功才启用小箭头
-        triggerBtn.style.cursor = 'pointer';
-        triggerBtn.style.opacity = '1';
-        triggerBtn.style.pointerEvents = 'auto';
-      } catch (error) {
-        console.error('预加载失败:', error);
-        triggerBtn.style.cursor = 'not-allowed';
-        triggerBtn.style.opacity = '0.5';
-        triggerBtn.style.pointerEvents = 'none';
+      // 预加载成功才启用小箭头
+      triggerBtn.style.cursor = 'pointer';
+      triggerBtn.style.opacity = '1';
+      triggerBtn.style.pointerEvents = 'auto';
+    } catch (error) {
+      console.error('预加载失败:', error);
+      triggerBtn.style.cursor = 'not-allowed';
+      triggerBtn.style.opacity = '0.5';
+      triggerBtn.style.pointerEvents = 'none';
 
-        const errorTip = document.createElement('div');
-        errorTip.textContent = '加载失败，请刷新页面重试';
-        errorTip.style.cssText = `
+      const errorTip = document.createElement('div');
+      errorTip.textContent = '加载失败，请刷新页面重试';
+      errorTip.style.cssText = `
                     position: fixed;
                     right: 36px;
                     top: 50%;
@@ -403,11 +399,15 @@ window.addEventListener('load', async () => {
                     font-size: 12px;
                     z-index: 1000;
                 `;
-        document.body.appendChild(errorTip);
-        setTimeout(() => errorTip.remove(), 3000);
-      }
-    }, 2000);
+      document.body.appendChild(errorTip);
+      setTimeout(() => errorTip.remove(), 3000);
+    }
   }
+})
+
+window.navigation.addEventListener('navigatesuccess', () => {
+  const currentUrl = window.location.href;
+
 })
 
 // 注入按钮的函数
