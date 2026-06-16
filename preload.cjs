@@ -398,14 +398,7 @@ async function handleVideoPage() {
     console.log('检测到视频页面，注入按钮');
     triggerBtn = injectButton();
   } else {
-    // 已存在按钮（来自 SPA 路由切换），重置上一视频残留的 UI
-    const dropdown = document.querySelector('.download-dropdown');
-    if (dropdown) dropdown.style.display = 'none';
-    // 上一视频的清晰度列表是旧 URL 的，删掉防止误点
-    document.querySelectorAll('.quality-menu').forEach(el => el.remove());
-    // 设置面板也关上（可能用户上次展开过选择目录）
-    const settingsPanel = document.querySelector('.settings-panel');
-    if (settingsPanel) settingsPanel.style.display = 'none';
+    document.dispatchEvent(new MouseEvent('click', { bubbles: true }))
   }
 
   // 预加载期间禁用小箭头
