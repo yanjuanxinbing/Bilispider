@@ -1,7 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
-let socket = null
-
 // 添加一个变量存储预加载的清晰度列表
 const qualityCache = {}
 
@@ -56,31 +54,22 @@ async function preloadQualities() {
   return qualityLoadPromise
 }
 
-async function connectWebSocket() {
-  return new Promise((resolve, reject) => {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      resolve(socket)
-      return
-    }
+const socket = new WebSocket('ws://localhost:5001/ws')
 
-    socket = new WebSocket('ws://localhost:5001/ws')
+socket.onopen = () => {
+  console.log('WebSocket已连接')
+  resolve(socket)
+}
 
-    socket.onopen = () => {
-      console.log('WebSocket已连接')
-      resolve(socket)
-    }
+socket.onmessage = (event) => {
+  const data = JSON.parse(event.data)
+  console.log('收到下载进度:', data)
+  window.dispatchEvent(new CustomEvent('download_progress', { detail: data }))
+}
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data)
-      console.log('收到下载进度:', data)
-      window.dispatchEvent(new CustomEvent('download_progress', { detail: data }))
-    }
-
-    socket.onerror = (err) => {
-      console.error('WebSocket错误:', err)
-      reject(err)
-    }
-  })
+socket.onerror = (err) => {
+  console.error('WebSocket错误:', err)
+  reject(err)
 }
 
 // 定义要暴露的API
@@ -406,7 +395,6 @@ async function handleVideoPage() {
 
   try {
     console.log('开始预加载服务和清晰度');
-    await connectWebSocket();
     await preloadQualities();
     console.log('清晰度预加载完成');
 
@@ -526,15 +514,6 @@ function injectButton() {
     dropdown.style.display = isOpen ? 'block' : 'none'
     triggerBtn.style.transform = `translateY(-50%) rotate(${isOpen ? '180deg' : '0deg'})`
     triggerBtn.style.background = isOpen ? '#f4f4f4' : '#fff'
-
-    if (isOpen) {
-      connectWebSocket().then(() => {
-        console.log('服务已提前准备就绪')
-        return preloadQualities()  // 预加载清晰度
-      }).catch(error => {
-        console.error('服务准备失败:', error)
-      })
-    }
   })
 
   // 点击外部只关闭下拉菜单，不断开连接
