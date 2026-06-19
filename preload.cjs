@@ -341,26 +341,6 @@ function setTriggerDisabled(triggerBtn, disabled) {
   }
 }
 
-// 显示错误提示
-function showErrorTip(message) {
-  const errorTip = document.createElement('div');
-  errorTip.textContent = message;
-  errorTip.style.cssText = `
-    position: fixed;
-    right: 36px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(255, 0, 0, 0.8);
-    color: #fff;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-size: 12px;
-    z-index: 1000;
-  `;
-  document.body.appendChild(errorTip);
-  setTimeout(() => errorTip.remove(), 3000);
-}
-
 // 视频页通用处理：注入按钮（已注入则复用） + 预加载清晰度
 async function handleVideoPage() {
   let triggerBtn = document.querySelector('.download-trigger-btn');
@@ -385,7 +365,6 @@ async function handleVideoPage() {
   } catch (error) {
     console.error('预加载失败:', error);
     setTriggerDisabled(triggerBtn, true);
-    showErrorTip('加载失败，请刷新页面重试');
   }
 }
 
