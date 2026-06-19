@@ -1,5 +1,21 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
+const socket = new WebSocket('ws://localhost:5001/ws')
+
+socket.onopen = () => {
+  console.log('WebSocket已连接')
+}
+
+socket.onmessage = (event) => {
+  const data = JSON.parse(event.data)
+  console.log('收到下载进度:', data)
+  window.dispatchEvent(new CustomEvent('download_progress', { detail: data }))
+}
+
+socket.onerror = (err) => {
+  console.error('WebSocket错误:', err)
+}
+
 // 添加一个变量存储预加载的清晰度列表
 const qualityCache = {}
 
@@ -368,34 +384,10 @@ async function handleVideoPage() {
   }
 }
 
-// 首次加载
-window.addEventListener('load', async () => {
-  if (window.location.pathname.includes('/video/')) {
-    await handleVideoPage();
-    const socket = new WebSocket('ws://localhost:5001/ws')
-
-    socket.onopen = () => {
-      console.log('WebSocket已连接')
-      resolve(socket)
-    }
-
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data)
-      console.log('收到下载进度:', data)
-      window.dispatchEvent(new CustomEvent('download_progress', { detail: data }))
-    }
-
-    socket.onerror = (err) => {
-      console.error('WebSocket错误:', err)
-      reject(err)
-    }
-  }
-})
-
-// SPA 路由变化（视频页 → 视频页），重新预加载新视频的清晰度
+// 进入或切换时都会触发
 window.navigation.addEventListener('navigatesuccess', async () => {
   if (window.location.pathname.includes('/video/')) {
-    console.log('navigatesuccess: 切换视频，重新预加载清晰度');
+    console.log('navigatesuccess');
     await handleVideoPage();
   }
 })
