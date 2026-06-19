@@ -54,24 +54,6 @@ async function preloadQualities() {
   return qualityLoadPromise
 }
 
-const socket = new WebSocket('ws://localhost:5001/ws')
-
-socket.onopen = () => {
-  console.log('WebSocket已连接')
-  resolve(socket)
-}
-
-socket.onmessage = (event) => {
-  const data = JSON.parse(event.data)
-  console.log('收到下载进度:', data)
-  window.dispatchEvent(new CustomEvent('download_progress', { detail: data }))
-}
-
-socket.onerror = (err) => {
-  console.error('WebSocket错误:', err)
-  reject(err)
-}
-
 // 定义要暴露的API
 const electronAPI = {
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
@@ -411,6 +393,23 @@ async function handleVideoPage() {
 window.addEventListener('load', async () => {
   if (window.location.pathname.includes('/video/')) {
     await handleVideoPage();
+    const socket = new WebSocket('ws://localhost:5001/ws')
+
+    socket.onopen = () => {
+      console.log('WebSocket已连接')
+      resolve(socket)
+    }
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+      console.log('收到下载进度:', data)
+      window.dispatchEvent(new CustomEvent('download_progress', { detail: data }))
+    }
+
+    socket.onerror = (err) => {
+      console.error('WebSocket错误:', err)
+      reject(err)
+    }
   }
 })
 
