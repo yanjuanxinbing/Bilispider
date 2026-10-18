@@ -66,9 +66,8 @@ function saveConfig(config) {
 let currentConfig = loadConfig()
 
 function startBackendServer() {
-  const pythonPath = path.join(__dirname, '.venv', 'Scripts', 'python.exe');
   const backendPath = path.join(__dirname, 'main.py');
-  backend = spawn(pythonPath, [backendPath]);
+  backend = spawn("python", [backendPath]);
 }
 
 function createWindow(url) {

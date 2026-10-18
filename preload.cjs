@@ -8,7 +8,6 @@ socket.onopen = () => {
 
 socket.onmessage = (event) => {
   const data = JSON.parse(event.data)
-  console.log('收到下载进度:', data)
   window.dispatchEvent(new CustomEvent('download_progress', { detail: data }))
 }
 
@@ -496,6 +495,29 @@ function injectButton() {
     }
   })
 
+  const progressHandler = (event) => {
+    const data = event.detail
+    const percentage = data.percentage
+    statusText.textContent = `下载中: ${percentage}%`
+    if (percentage === 100) {
+      window.removeEventListener('download_progress', progressHandler)
+      statusText.textContent = '下载成功！'
+      statusText.style.background = 'rgba(0, 180, 0, 0.8)'
+      setTimeout(() => {
+        statusText.style.display = 'none'
+        // 重新启用所有按钮
+        buttons.audioBtn.disabled = false;
+        buttons.audioBtn.style.background = '#00aeec';
+        buttons.audioBtn.style.cursor = 'pointer';
+        buttons.videoBtn.disabled = false;
+        buttons.videoBtn.style.background = '#ff6b6b';
+        buttons.videoBtn.style.cursor = 'pointer';
+        buttons.settingsBtn.style.pointerEvents = 'auto';
+        buttons.settingsBtn.style.opacity = '1';
+      }, 2000)
+    }
+  }
+
   // 添加音频下载按钮点击事件
   buttons.audioBtn.addEventListener('click', async () => {
     if (buttons.audioBtn.disabled) return
@@ -515,29 +537,6 @@ function injectButton() {
       statusText.textContent = '正在准备下载...'
 
       // 添加进度更新监听
-      const progressHandler = (event) => {
-        const data = event.detail
-        const percentage = data.percentage
-        statusText.textContent = `下载中: ${percentage}%`
-        if (percentage === 100) {
-          window.removeEventListener('download_progress', progressHandler)
-          statusText.textContent = '下载成功！'
-          statusText.style.background = 'rgba(0, 180, 0, 0.8)'
-
-          setTimeout(() => {
-            statusText.style.display = 'none'
-            // 重新启用所有按钮
-            buttons.audioBtn.disabled = false;
-            buttons.audioBtn.style.background = '#00aeec';
-            buttons.audioBtn.style.cursor = 'pointer';
-            buttons.videoBtn.disabled = false;
-            buttons.videoBtn.style.background = '#ff6b6b';
-            buttons.videoBtn.style.cursor = 'pointer';
-            buttons.settingsBtn.style.pointerEvents = 'auto';
-            buttons.settingsBtn.style.opacity = '1';
-          }, 2000)
-        }
-      }
       window.addEventListener('download_progress', progressHandler)
 
       // 发送下载请求
@@ -556,9 +555,9 @@ function injectButton() {
         throw new Error(result.error || '下载失败')
       }
     } catch (error) {
+      window.removeEventListener('download_progress', progressHandler)
       statusText.textContent = '下载失败: ' + error.message
       statusText.style.background = 'rgba(255, 0, 0, 0.8)'
-
       setTimeout(() => {
         statusText.style.display = 'none'
         // 重新启用所有按钮
@@ -593,28 +592,6 @@ function injectButton() {
       statusText.textContent = '正在准备下载...'
 
       // 添加进度更新监听
-      const progressHandler = (event) => {
-        const data = event.detail
-        const percentage = data.percentage
-        statusText.textContent = `下载中: ${percentage}%`
-        if (percentage === 100) {
-          window.removeEventListener('download_progress', progressHandler)
-          statusText.textContent = '下载成功！'
-          statusText.style.background = 'rgba(0, 180, 0, 0.8)'
-          setTimeout(() => {
-            statusText.style.display = 'none'
-            // 重新启用所有按钮
-            buttons.audioBtn.disabled = false;
-            buttons.audioBtn.style.background = '#00aeec';
-            buttons.audioBtn.style.cursor = 'pointer';
-            buttons.videoBtn.disabled = false;
-            buttons.videoBtn.style.background = '#ff6b6b';
-            buttons.videoBtn.style.cursor = 'pointer';
-            buttons.settingsBtn.style.pointerEvents = 'auto';
-            buttons.settingsBtn.style.opacity = '1';
-          }, 2000)
-        }
-      }
       window.addEventListener('download_progress', progressHandler)
 
       // 发送下载请求
@@ -633,6 +610,7 @@ function injectButton() {
       }
 
     } catch (error) {
+      window.removeEventListener('download_progress', progressHandler)
       statusText.textContent = '下载失败: ' + error.message
       statusText.style.background = 'rgba(255, 0, 0, 0.8)'
       setTimeout(() => {

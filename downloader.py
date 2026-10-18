@@ -47,7 +47,7 @@ class Downloader:
         try:
             headers = {"Range": f"bytes={start}-{end}"}
             async with self.session.get(url, headers=headers) as res:
-                async for data in res.content.iter_chunked(256 * 1024):
+                async for data in res.content.iter_any():
                     mm[start:start + len(data)] = data
                     start += len(data)
                     downloaded[0] += len(data)
@@ -84,10 +84,22 @@ class Downloader:
             if fd is not None:
                 os.close(fd)
 
+    def _dedup(self, sink):
+        state = {'last': None}
+
+        def report(percentage):
+            if percentage == state['last']:
+                return
+            state['last'] = percentage
+            sink(percentage)
+
+        return report
+
     async def audio_download(self, dir):
         try:
             path = os.path.join(dir, f"{self.title}.m4a")
-            await self.download_file(self.audio_url, path, lambda p: self.callback(p, self.title))
+            report = self._dedup(lambda p: self.callback(p, self.title))
+            await self.download_file(self.audio_url, path, report)
             return path
         except Exception as e:
             self.callback(0, f"下载失败: {e}")
@@ -95,6 +107,7 @@ class Downloader:
     async def video_download(self, dir, quality):
         ap = 0
         vp = 0
+        report = self._dedup(lambda p: self.callback(p, self.title))
         try:
             temp_audio = os.path.join(dir, f"{self.title}_temp.m4a")
             temp_video = os.path.join(dir, f"{self.title}_temp.mp4")
@@ -108,7 +121,7 @@ class Downloader:
                     vp = p
                 # 计算总进度
                 percentage = min((ap + vp) // 2, 99)
-                self.callback(percentage, self.title)
+                report(percentage)
 
             tasks = [
                 self.download_file(self.audio_url, temp_audio, lambda p: progress_wrapper(p, 'audio')),
